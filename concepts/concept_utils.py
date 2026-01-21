@@ -4,7 +4,7 @@ import numpy as np
 from sklearn.svm import SVC
 from tqdm import tqdm
 from PIL import Image
-
+import pdb
 
 class ListDataset:
     def __init__(self, images, preprocess=None):
@@ -78,6 +78,7 @@ def get_embeddings(loader, model, device="cuda"):
     for image in tqdm(loader):
         image = image.to(device)
         try:
+            #pdb.set_trace()
             batch_act = model(image).squeeze().detach().cpu().numpy()
         except:
             # Then it's a CLIP model. This is a really nasty soln, i should fix this.
@@ -130,13 +131,25 @@ def learn_concept_bank(pos_loader, neg_loader, backbone, n_samples, C, device="c
         dict: Concept information, including the CAV and margin stats.
     """
     print("Extracting Embeddings: ")
-    pos_act = get_embeddings(pos_loader, backbone, device=device)
+    if pos_loader:
+        pos_act = get_embeddings(pos_loader, backbone, device=device)
     neg_act = get_embeddings(neg_loader, backbone, device=device)
-    
-    X_train = np.concatenate([pos_act[:n_samples], neg_act[:n_samples]], axis=0)
-    X_val = np.concatenate([pos_act[n_samples:], neg_act[n_samples:]], axis=0)
-    y_train = np.concatenate([np.ones(pos_act[:n_samples].shape[0]), np.zeros(neg_act[:n_samples].shape[0])], axis=0)
-    y_val = np.concatenate([np.ones(pos_act[n_samples:].shape[0]), np.zeros(neg_act[n_samples:].shape[0])], axis=0)
+    if pos_loader:
+        X_train = np.concatenate([pos_act[:n_samples], neg_act[:n_samples]], axis=0)
+        X_val = np.concatenate([pos_act[n_samples:], neg_act[n_samples:]], axis=0)
+        y_train = np.concatenate([np.ones(pos_act[:n_samples].shape[0]),
+                                  np.zeros(neg_act[:n_samples].shape[0])], axis=0)
+        y_val = np.concatenate([np.ones(pos_act[n_samples:].shape[0]),
+                                np.zeros(neg_act[n_samples:].shape[0])], axis=0)
+    else:
+        X_train = neg_act[:2*n_samples]
+        X_val = neg_act[2*n_samples:]
+        y_train = np.zeros([neg_act[:2*n_samples].shape[0]])
+        y_val = np.zeros([neg_act[n_samples*2:].shape[0]])
+        # Have to add at least one element to positive
+        y_train[0] = 1
+        y_val[0] = 1
+        #X_train = np.concatenate(
     concept_info = {}
     for c in C:
         concept_info[c] = get_cavs(X_train, y_train, X_val, y_val, c)

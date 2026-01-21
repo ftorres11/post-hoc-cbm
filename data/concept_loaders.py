@@ -1,12 +1,64 @@
 import os
 import pickle
 import torch
+from torchvision import datasets 
 
 import pandas as pd
 import numpy as np
 from PIL import Image
 from torch.utils.data import DataLoader
-from .constants import CUB_PROCESSED_DIR
+from .constants import CUB_PROCESSED_DIR, cfMNIST_adj_mat, ifMNIST_adj_mat
+import pdb
+
+def fMNIST_concept_loaders(preprocess, n_samples, batch_size, num_workers,
+                           seed, dataset_name):
+    from .fmnist import Adjacent_Loader, get_concept_dicts, fMNISTConceptDataset
+    if dataset_name == "cfMNIST":
+        n_concepts = 11
+        with open(cfMNIST_adj_mat, 'rb') as dump:
+            adj = np.load(dump)
+    elif dataset_name == "ifMNIST":
+        n_concepts = 8
+        with open(ifMNIST_adj_mat, 'rb') as dump:
+            adj = np.load(dump)
+
+    set_helper = datasets.FashionMNIST(root='data', train=True,
+                                       download=True, transform=preprocess)
+    metadata = Adjacent_Loader(set_helper, n_concepts, adj)
+    concept_info = get_concept_dicts(metadata)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    concept_loaders = {}
+    for c_idx, c_data in concept_info.items():
+        pos_ims, neg_ims = c_data[1], c_data[0]
+        if len(pos_ims) == 0:
+            pos_concept_ims = None
+            neg_concept_ims = np.random.choice(neg_ims, 4*n_samples, replace=False)
+            pos_ds = None
+            neg_ds = fMNISTConceptDataset(set_helper.data, neg_concept_ims, preprocess)
+            pos_loader = None
+
+        else:
+            # Sample equal number of positive and negative images
+            try:
+                pos_concept_ims = np.random.choice(pos_ims, 2*n_samples, replace=False)
+                neg_concept_ims = np.random.choice(neg_ims, 2*n_samples, replace=False)
+            except Exception as e:
+                print(e)
+                print(f"{len(pos_ims)} positives, {len(neg_ims)} negatives")
+                pos_concept_ims = np.random.choice(pos_ims, 2*n_samples, replace=True)
+                neg_concept_ims = np.random.choice(neg_ims, 2*n_samples, replace=True)
+            pos_ds = fMNISTConceptDataset(set_helper.data, pos_concept_ims, preprocess)
+            neg_ds = fMNISTConceptDataset(set_helper.data, neg_concept_ims, preprocess)
+            pos_loader = DataLoader(pos_ds, batch_size=batch_size, shuffle=False, num_workers=num_workers)
+        neg_loader = DataLoader(neg_ds, batch_size=batch_size, shuffle=False, num_workers=num_workers)
+        concept_loaders[c_idx] = {
+                "pos": pos_loader,
+                "neg": neg_loader
+            }
+    return concept_loaders  
+
+
 
 
 def cub_concept_loaders(preprocess, n_samples, batch_size, num_workers, seed):
@@ -160,7 +212,12 @@ def broden_concept_loaders(preprocess, n_samples, batch_size, num_workers, seed)
 def get_concept_loaders(dataset_name, preprocess, n_samples=50, batch_size=100, num_workers=4, seed=1):
     if dataset_name == "cub":
        return cub_concept_loaders(preprocess, n_samples, batch_size, num_workers, seed)
-    
+    elif dataset_name == "ifMNIST":
+        return fMNIST_concept_loaders(preprocess, n_samples, batch_size,
+                                     num_workers, seed, dataset_name)
+    elif dataset_name == "cfMNIST":
+        return fMNIST_concept_loaders(preprocess, n_samples, batch_size,
+                                     num_workers, seed, dataset_name)
     elif dataset_name == "derm7pt":
         return derm7pt_concept_loaders(preprocess, n_samples, batch_size, num_workers, seed)
     

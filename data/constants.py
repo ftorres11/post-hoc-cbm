@@ -4,9 +4,13 @@ import os
 # CUB data is downloaded from the CBM release.
 # Dataset: https://worksheets.codalab.org/rest/bundles/0xd013a7ba2e88481bbc07e787f73109f5/ 
 # Metadata and splits: https://worksheets.codalab.org/bundles/0x5b9d528d2101418b87212db92fea6683
-CUB_DATA_DIR = "/path/to/cub_dataset"
-CUB_PROCESSED_DIR = "/path/to/class_attr_data_10"
+CUB_DATA_DIR = "/home/felipe/Documentos/Postdoc_Interpretability/CUB_200_2011"
+CUB_PROCESSED_DIR = "/home/felipe/Documentos/Postdoc_Interpretability/CUB_processed/class_attr_data_10"
 
+# fMNIST
+fMNIST_data_dir = "/home/felipe/Documentos/Postdoc_Interpretability/xai-graph-cbm/data/fMNIST"
+cfMNIST_adj_mat = "/home/felipe/Documentos/Postdoc_Interpretability/xai-graph-cbm/data/fMNIST/adj_ct_cfMNIST.npy"
+ifMNIST_adj_mat = "/home/felipe/Documentos/Postdoc_Interpretability/xai-graph-cbm/data/fMNIST/adj_ct_ifMNIST.npy"
 
 # Derm data constants
 # Derm7pt is obtained from : https://derm.cs.sfu.ca/Welcome.html

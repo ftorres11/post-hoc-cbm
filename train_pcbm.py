@@ -5,7 +5,7 @@ import numpy as np
 import torch
 from sklearn.linear_model import SGDClassifier
 from sklearn.metrics import roc_auc_score
-
+import pdb 
 
 from data import get_dataset
 from concepts import ConceptBank
@@ -18,7 +18,7 @@ def config():
     parser.add_argument("--concept-bank", required=True, type=str, help="Path to the concept bank")
     parser.add_argument("--out-dir", required=True, type=str, help="Output folder for model/run info.")
     parser.add_argument("--dataset", default="cub", type=str)
-    parser.add_argument("--backbone-name", default="resnet18_cub", type=str)
+    parser.add_argument("--backbone-name", default="resnet18_cream", type=str)
     parser.add_argument("--device", default="cuda", type=str)
     parser.add_argument("--seed", default=42, type=int, help="Random seed")
     parser.add_argument("--batch-size", default=64, type=int)
@@ -93,16 +93,19 @@ def main(args, concept_bank, backbone, preprocess):
     # Sorry for the model path hack. Probably i'll change this later.
     model_path = os.path.join(args.out_dir,
                               f"pcbm_{args.dataset}__{args.backbone_name}__{conceptbank_source}__lam:{args.lam}__alpha:{args.alpha}__seed:{args.seed}.ckpt")
-    torch.save(posthoc_layer, model_path)
+    torch.save(posthoc_layer.state_dict(), model_path)
 
     # Again, a sad hack.. Open to suggestions
     run_info_file = model_path.replace("pcbm", "run_info-pcbm")
     run_info_file = run_info_file.replace(".ckpt", ".pkl")
     run_info_file = os.path.join(args.out_dir, run_info_file)
-    
-    with open(run_info_file, "wb") as f:
-        pickle.dump(run_info, f)
-
+    fixed_run_info_file = os.path.join(args.out_dir, 'run_info_file.pkl')
+    try:
+        with open(run_info_file, "wb") as f:
+            pickle.dump(run_info, f)
+    except FileNotFoundError:
+        with open(fixed_run_info_file, 'wb') as f:
+            pickle.dump(run_info, f)
     
     if num_classes > 1:
         # Prints the Top-5 Concept Weigths for each class.

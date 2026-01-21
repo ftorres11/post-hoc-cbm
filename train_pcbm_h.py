@@ -4,6 +4,7 @@ import pickle
 import numpy as np
 import torch
 from tqdm import tqdm
+import pdb
 import sys
 import torch.nn as nn
 from torch.utils.data import DataLoader, TensorDataset
@@ -16,9 +17,9 @@ from models import PosthocLinearCBM, PosthocHybridCBM, get_model
 from training_tools import load_or_compute_projections, AverageMeter, MetricComputer
 
 
-
 def config():
     parser = argparse.ArgumentParser()
+    parser.add_argument("--backbone_name", default="resnet18_cub", type=str)
     parser.add_argument("--out-dir", required=True, type=str, help="Output folder")
     parser.add_argument("--pcbm-path", required=True, type=str, help="Trained PCBM module.")
     parser.add_argument("--concept-bank", required=True, type=str, help="Path to the concept bank.")
@@ -123,19 +124,31 @@ def main(args, backbone, preprocess):
     # Train PCBM-h
     run_info = train_hybrid(args, train_loader, test_loader, hybrid_model, hybrid_optimizer, num_classes)
 
-    torch.save(hybrid_model, hybrid_model_path)
-    with open(run_info_file, "wb") as f:
-        pickle.dump(run_info, f)
+    torch.save(hybrid_model.state_dict(), hybrid_model_path)
+    try:
+        with open(run_info_file, "wb") as f:
+            pickle.dump(run_info, f)
+    except FileNotFoundError:
+        run_info_file = os.path.join(args.out_dir, 'run_info_file_hybrid.pkl')
+        with open(run_info_file, "wb") as f:
+            pickle.dump(run_info, f)
     
     print(f"Saved to {hybrid_model_path}, {run_info_file}")
 
 if __name__ == "__main__":    
     args = config()    
     # Load the PCBM
-    posthoc_layer = torch.load(args.pcbm_path)
-    posthoc_layer = posthoc_layer.eval()
-    args.backbone_name = posthoc_layer.backbone_name
     backbone, preprocess = get_model(args, backbone_name=args.backbone_name)
     backbone = backbone.to(args.device)
+    _, _, idx_to_class, classes = get_dataset(args, preprocess)
+    all_concepts = pickle.load(open(args.concept_bank, 'rb'))
+    all_concept_names = list(all_concepts.keys())
+    concept_bank = ConceptBank(all_concepts, args.device)
+    posthoc_layer = PosthocLinearCBM(concept_bank, backbone_name=args.backbone_name,
+                                     idx_to_class=idx_to_class, n_classes=len(classes))
+    posthoc_sdict = torch.load(args.pcbm_path)
+    posthoc_layer.load_state_dict(posthoc_sdict)
+    posthoc_layer = posthoc_layer.eval()
+    args.backbone_name = posthoc_layer.backbone_name
     backbone.eval()
     main(args, backbone, preprocess)

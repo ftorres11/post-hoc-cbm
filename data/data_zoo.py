@@ -30,7 +30,18 @@ def get_dataset(args, preprocess=None):
                                               shuffle=True, num_workers=args.num_workers)
         test_loader = torch.utils.data.DataLoader(testset, batch_size=args.batch_size,
                                           shuffle=False, num_workers=args.num_workers)
-
+    elif 'fMNIST' in args.dataset:
+        trainset = datasets.FashionMNIST(root=args.out_dir, train=True,
+                                         download=True, transform=preprocess)
+        testset= datasets.FashionMNIST(root=args.out_dir, train=False,
+                                         download=True, transform=preprocess)
+        classes = trainset.classes
+        class_to_idx = {c: i for (i, c) in enumerate(classes)}
+        idx_to_class = {v: k for k, v in class_to_idx.items()}
+        train_loader = torch.utils.data.DataLoader(trainset, batch_size=args.batch_size,
+                                             shuffle=True)#, num_workers=args.num_workers)
+        test_loader = torch.utils.data.DataLoader(testset, batch_size=args.batch_size,
+                                        shuffle=False)#, num_workers=args.num_workers)
 
     elif args.dataset == "cub":
         from .cub import load_cub_data
