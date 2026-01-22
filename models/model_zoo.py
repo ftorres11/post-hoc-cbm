@@ -57,9 +57,18 @@ def get_model(args, backbone_name="resnet18_cub", full_model=False):
                                 transforms.Resize(size=(224, 224)),
                                 transforms.ToTensor(),
                                 transforms.ConvertImageDtype(torch.float),
-                                transforms.Normalize(cream_mean_pxs, cream_std_pxs)])
+                                transforms.Normalize(mean=cream_mean_pxs,
+                                                     std=cream_std_pxs)])
 
-
+    elif "resnet50" == backbone_name.lower():
+        from torchvision.models import resnet50
+        model = resnet50(pretrained=True)
+        backbone, model_top = ResNetBottom(model), ResNetTop(model)
+        inet_mean_pxs = np.array([.485, .456, .406])
+        inet_std_pxs = ([.229, .224, .225])
+        preprocess = transforms.Compose([transforms.ToTensor(),
+                                         transforms.Normalize(mean=inet_mean_pxs,
+                                                              std=inet_std_pxs)])
     elif "resnet18_fmnist" == backbone_name.lower():
         from .resnet_fmnist import resnet18
         model = resnet18()

@@ -1,6 +1,7 @@
 from torchvision import datasets
 import torch
 import os
+import pickle
 
 
 def get_dataset(args, preprocess=None):
@@ -30,6 +31,34 @@ def get_dataset(args, preprocess=None):
                                               shuffle=True, num_workers=args.num_workers)
         test_loader = torch.utils.data.DataLoader(testset, batch_size=args.batch_size,
                                           shuffle=False, num_workers=args.num_workers)
+    elif args.dataset == 'RIVAL10':
+        from .rival import AttrLoader
+        from .constants import RIVAL_DATA_DIR
+        from torchvision import transforms
+        num_classes = 10
+        TRAIN_PKL = os.path.join(RIVAL_DATA_DIR, 'train_v1.pkl')
+        TEST_PKL = os.path.join(RIVAL_DATA_DIR, 'test_v1.pkl')
+        normalizer = transforms.Normalize(mean=[.485, .456, .406],
+                                          std=[.229, .224, .225])
+        all_transforms = transforms.Compose([transforms.ToTensor(), normalizer])
+        train_data = pickle.load(open(TRAIN_PKL, 'rb'))
+        test_data = pickle.load(open(TEST_PKL, 'rb'))
+
+        train_loader = AttrLoader(RIVAL_DATA_DIR, train_data, all_transforms)
+        train_loader = torch.utils.data.DataLoader(train_loader, batch_size=args.batch_size,
+                                                   shuffle=True, num_workers=0)
+        test_loader = AttrLoader(RIVAL_DATA_DIR, test_data, all_transforms)
+        test_loader = torch.utils.data.DataLoader(test_loader, batch_size=args.batch_size,
+                                                   shuffle=True, num_workers=0)
+
+        classes = open(os.path.join(RIVAL_DATA_DIR, "classes.txt"), 'r').readlines()
+        classes = [line.strip() for line in classes]
+        idx_to_class = {i: classes[i] for i in range(num_classes)}
+        classes = [classes[i] for i in range(num_classes)]
+        print(len(classes), "num classes for RIVAL10")
+        print(len(train_loader), "training set size")
+        print(len(test_loader), "test set size")
+
     elif 'fMNIST' in args.dataset:
         trainset = datasets.FashionMNIST(root=args.out_dir, train=True,
                                          download=True, transform=preprocess)

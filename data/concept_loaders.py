@@ -7,7 +7,7 @@ import pandas as pd
 import numpy as np
 from PIL import Image
 from torch.utils.data import DataLoader
-from .constants import CUB_PROCESSED_DIR, cfMNIST_adj_mat, ifMNIST_adj_mat
+from .constants import CUB_PROCESSED_DIR, cfMNIST_adj_mat, ifMNIST_adj_mat, RIVAL_DATA_DIR
 import pdb
 
 def fMNIST_concept_loaders(preprocess, n_samples, batch_size, num_workers,
@@ -58,7 +58,45 @@ def fMNIST_concept_loaders(preprocess, n_samples, batch_size, num_workers,
             }
     return concept_loaders  
 
+def RIVAL_concept_loaders(preprocess, n_samples, batch_size, num_workers, seed):
+    from .rival import  RIVALConceptDataset, get_concept_dicts
+    TRAIN_PKL = os.path.join(RIVAL_DATA_DIR, "train_v1.pkl")
+    metadata = pickle.load(open(TRAIN_PKL, "rb"))
 
+    concept_info = get_concept_dicts(metadata)
+
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    concept_loaders = {}
+    for c_idx, c_data in concept_info.items():
+        pos_ims, neg_ims = c_data[1], c_data[0]
+        if len(pos_ims) == 0:
+            pos_concept_ims = None
+            neg_concept_ims = np.random.choice(neg_ims, 4*n_samples, replace=False)
+            pos_ds = None
+            neg_ds = RIVALConceptDataset(RIVAL_DATA_DIR, neg_concept_ims, preprocess)
+            pos_loader = None
+
+        else:
+            # Sample equal number of positive and negative images
+            try:
+                pos_concept_ims = np.random.choice(pos_ims, 2*n_samples, replace=False)
+                neg_concept_ims = np.random.choice(neg_ims, 2*n_samples, replace=False)
+            except Exception as e:
+                print(e)
+                print(f"{len(pos_ims)} positives, {len(neg_ims)} negatives")
+                pos_concept_ims = np.random.choice(pos_ims, 2*n_samples, replace=True)
+                neg_concept_ims = np.random.choice(neg_ims, 2*n_samples, replace=True)
+            ## Check here!!
+            pos_ds = RIVALConceptDataset(RIVAL_DATA_DIR, pos_concept_ims, preprocess)
+            neg_ds = RIVALConceptDataset(RIVAL_DATA_DIR, neg_concept_ims, preprocess)
+            pos_loader = DataLoader(pos_ds, batch_size=batch_size, shuffle=False, num_workers=num_workers)
+        neg_loader = DataLoader(neg_ds, batch_size=batch_size, shuffle=False, num_workers=num_workers)
+        concept_loaders[c_idx] = {
+                "pos": pos_loader,
+                "neg": neg_loader
+        }
+    return concept_loaders
 
 
 def cub_concept_loaders(preprocess, n_samples, batch_size, num_workers, seed):
@@ -212,6 +250,8 @@ def broden_concept_loaders(preprocess, n_samples, batch_size, num_workers, seed)
 def get_concept_loaders(dataset_name, preprocess, n_samples=50, batch_size=100, num_workers=4, seed=1):
     if dataset_name == "cub":
        return cub_concept_loaders(preprocess, n_samples, batch_size, num_workers, seed)
+    elif dataset_name == "RIVAL10":
+        return RIVAL_concept_loaders(preprocess, n_samples, batch_size, num_workers, seed)
     elif dataset_name == "ifMNIST":
         return fMNIST_concept_loaders(preprocess, n_samples, batch_size,
                                      num_workers, seed, dataset_name)

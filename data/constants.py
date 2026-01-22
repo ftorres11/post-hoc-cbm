@@ -12,6 +12,9 @@ fMNIST_data_dir = "/home/felipe/Documentos/Postdoc_Interpretability/xai-graph-cb
 cfMNIST_adj_mat = "/home/felipe/Documentos/Postdoc_Interpretability/xai-graph-cbm/data/fMNIST/adj_ct_cfMNIST.npy"
 ifMNIST_adj_mat = "/home/felipe/Documentos/Postdoc_Interpretability/xai-graph-cbm/data/fMNIST/adj_ct_ifMNIST.npy"
 
+# RIVAL10
+RIVAL_DATA_DIR = "RIVAL10"
+
 # Derm data constants
 # Derm7pt is obtained from : https://derm.cs.sfu.ca/Welcome.html
 DERM7_FOLDER = "/path/to/derm7pt/"

@@ -4,7 +4,6 @@ import torch
 from tqdm import tqdm
 from torch.utils.data import Dataset
 
-
 def unpack_batch(batch):
     if len(batch) == 3:
         return batch[0], batch[1]

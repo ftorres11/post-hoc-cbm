@@ -130,7 +130,8 @@ dmypy.json
 
 ## Files
 /Experiments
-FashionMNIST
+/FashionMNIST
 /concept_bank
+/RIVAL10
 *.pth
 *.swp
